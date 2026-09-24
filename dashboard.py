@@ -4,6 +4,7 @@ import pandas as pd
 import random
 from datetime import datetime
 
+
 # =========================================================
 # PAGE CONFIGURATION
 # =========================================================
@@ -11,8 +12,55 @@ from datetime import datetime
 st.set_page_config(
     page_title="Mine Subsidence Monitoring System",
     page_icon="⛏️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
+
+
+# =========================================================
+# MOBILE RESPONSIVE CSS
+# =========================================================
+
+st.markdown("""
+<style>
+
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+@media only screen and (max-width: 768px) {
+
+    .block-container {
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+        padding-top: 0.5rem;
+    }
+
+    h1 {
+        font-size: 1.55rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    h3 {
+        font-size: 1.05rem !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 1.25rem !important;
+    }
+
+    div[data-testid="stMetricLabel"] {
+        font-size: 0.75rem !important;
+    }
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 
 # =========================================================
 # LIVE DASHBOARD
@@ -22,36 +70,35 @@ st.set_page_config(
 def live_dashboard():
 
     # =====================================================
-    # GENERATE LIVE SIMULATED SENSOR DATA
+    # GENERATE LIVE SENSOR DATA
     # =====================================================
 
     sensors = []
 
     for i in range(1, 101):
 
-        # Normal operating values
         tilt = random.uniform(0.10, 0.70)
         displacement = random.uniform(1.0, 6.0)
         vibration = random.uniform(0.01, 0.08)
 
-        # Random abnormal conditions
         chance = random.random()
 
         if chance < 0.05:
-            # Critical
+
             tilt = random.uniform(1.5, 3.0)
             displacement = random.uniform(12.0, 20.0)
             vibration = random.uniform(0.20, 0.40)
             status = "Critical"
 
         elif chance < 0.15:
-            # Warning
+
             tilt = random.uniform(0.8, 1.5)
             displacement = random.uniform(7.0, 12.0)
             vibration = random.uniform(0.08, 0.20)
             status = "Warning"
 
         else:
+
             status = "Normal"
 
         sensors.append({
@@ -136,10 +183,14 @@ def live_dashboard():
     left, right = st.columns([2.2, 1])
 
     # =====================================================
-    # MINE MAP
+    # LEFT SIDE
     # =====================================================
 
     with left:
+
+        # =================================================
+        # MINE MAP
+        # =================================================
 
         st.subheader(
             "🗺️ Live Mine Deformation Risk Map"
@@ -205,6 +256,12 @@ def live_dashboard():
             "Critical": "x"
         }
 
+        sensor_colors = {
+            "Normal": "#00c853",
+            "Warning": "#ffb000",
+            "Critical": "#ff2b2b"
+        }
+
         for status, symbol in sensor_symbols.items():
 
             selected = df[
@@ -222,7 +279,8 @@ def live_dashboard():
 
                     marker=dict(
                         size=14,
-                        symbol=symbol
+                        symbol=symbol,
+                        color=sensor_colors[status]
                     ),
 
                     text=selected["Sensor"],
@@ -239,9 +297,12 @@ def live_dashboard():
                     hovertemplate=(
                         "<b>%{text}</b><br>"
                         "Tilt: %{customdata[0]}°<br>"
-                        "Displacement: %{customdata[1]} mm<br>"
-                        "Vibration: %{customdata[2]} g<br>"
-                        "Status: " + status +
+                        "Displacement: "
+                        "%{customdata[1]} mm<br>"
+                        "Vibration: "
+                        "%{customdata[2]} g<br>"
+                        "Status: "
+                        + status +
                         "<extra></extra>"
                     ),
 
@@ -254,7 +315,17 @@ def live_dashboard():
         # -------------------------------------------------
 
         fig.update_layout(
-            height=570,
+
+            height=480,
+
+            # IMPORTANT:
+            # This stays constant so Plotly does not reset
+            # the user's view every refresh.
+            uirevision="mine-map-stable",
+
+            transition={
+                "duration": 0
+            },
 
             xaxis=dict(
                 title="Mine Panel",
@@ -284,7 +355,12 @@ def live_dashboard():
 
         st.plotly_chart(
             fig,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "displayModeBar": False,
+                "responsive": True
+            },
+            key="mine_map_live"
         )
 
         st.caption(
@@ -294,7 +370,7 @@ def live_dashboard():
         )
 
         # =================================================
-        # 3D UNDERGROUND MINE DIGITAL MODEL
+        # 3D UNDERGROUND MINE MODEL
         # =================================================
 
         st.subheader(
@@ -372,7 +448,7 @@ def live_dashboard():
         )
 
         # -------------------------------------------------
-        # UNDERGROUND ROOF
+        # ROOF
         # -------------------------------------------------
 
         fig3d.add_trace(
@@ -391,7 +467,7 @@ def live_dashboard():
         )
 
         # -------------------------------------------------
-        # UNDERGROUND FLOOR
+        # FLOOR
         # -------------------------------------------------
 
         fig3d.add_trace(
@@ -437,7 +513,7 @@ def live_dashboard():
             )
 
         # -------------------------------------------------
-        # SENSOR NODE POSITIONS
+        # SENSOR NODE DATA
         # -------------------------------------------------
 
         x_3d = []
@@ -467,12 +543,18 @@ def live_dashboard():
 
             sensor_names.append(row["Sensor"])
             tilt_values.append(row["Tilt"])
-            displacement_values.append(row["Displacement"])
-            vibration_values.append(row["Vibration"])
-            status_values.append(row["Status"])
+            displacement_values.append(
+                row["Displacement"]
+            )
+            vibration_values.append(
+                row["Vibration"]
+            )
+            status_values.append(
+                row["Status"]
+            )
 
         # -------------------------------------------------
-        # RISK-BASED SENSOR COLOURS
+        # RISK COLOURS
         # -------------------------------------------------
 
         marker_colors = []
@@ -480,20 +562,30 @@ def live_dashboard():
         for status in status_values:
 
             if status == "Critical":
-                marker_colors.append("#ff2b2b")
+
+                marker_colors.append(
+                    "#ff2b2b"
+                )
 
             elif status == "Warning":
-                marker_colors.append("#ffb000")
+
+                marker_colors.append(
+                    "#ffb000"
+                )
 
             else:
-                marker_colors.append("#00c853")
+
+                marker_colors.append(
+                    "#00c853"
+                )
 
         # -------------------------------------------------
-        # SENSOR NODES
+        # 3D SENSOR NODES
         # -------------------------------------------------
 
         fig3d.add_trace(
             go.Scatter3d(
+
                 x=x_3d,
                 y=y_3d,
                 z=z_3d,
@@ -525,8 +617,10 @@ def live_dashboard():
                 hovertemplate=(
                     "<b>%{text}</b><br>"
                     "Tilt: %{customdata[0]:.2f}°<br>"
-                    "Displacement: %{customdata[1]:.2f} mm<br>"
-                    "Vibration: %{customdata[2]:.2f} g<br>"
+                    "Displacement: "
+                    "%{customdata[1]:.2f} mm<br>"
+                    "Vibration: "
+                    "%{customdata[2]:.2f} g<br>"
                     "Risk: %{customdata[3]}"
                     "<extra></extra>"
                 ),
@@ -536,7 +630,7 @@ def live_dashboard():
         )
 
         # -------------------------------------------------
-        # RISK LEGEND
+        # 3D LEGEND
         # -------------------------------------------------
 
         for label, colour in [
@@ -561,11 +655,21 @@ def live_dashboard():
             )
 
         # -------------------------------------------------
-        # 3D CAMERA / AXES
+        # 3D LAYOUT
         # -------------------------------------------------
 
         fig3d.update_layout(
-            height=700,
+
+            height=560,
+
+            # IMPORTANT:
+            # Stable uirevision prevents the camera from
+            # jumping back every 2 seconds.
+            uirevision="underground-model-stable",
+
+            transition={
+                "duration": 0
+            },
 
             margin=dict(
                 l=0,
@@ -601,6 +705,9 @@ def live_dashboard():
                     zeroline=False
                 ),
 
+                # Initial camera only.
+                # uirevision preserves the user's position
+                # after they rotate/zoom.
                 camera=dict(
                     eye=dict(
                         x=1.55,
@@ -622,19 +729,24 @@ def live_dashboard():
         st.plotly_chart(
             fig3d,
             use_container_width=True,
-            key="3d_mine_view"
+            config={
+                "displayModeBar": False,
+                "responsive": True
+            },
+            key="underground_3d_live"
         )
 
         st.caption(
             "Interactive 3D digital model of the underground mine. "
-            "Sensor nodes change colour according to simulated risk level. "
-            "Drag to rotate • Scroll to zoom • Hover over a sensor for readings."
+            "Sensor nodes change colour according to simulated "
+            "risk level. Drag to rotate • Scroll to zoom • "
+            "Hover over a sensor for readings."
         )
 
         st.divider()
 
     # =====================================================
-    # EARLY WARNING
+    # RIGHT SIDE — EARLY WARNING
     # =====================================================
 
     with right:
@@ -772,7 +884,8 @@ def live_dashboard():
     st.dataframe(
         display_df,
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
+        height=420
     )
 
     st.divider()
@@ -825,12 +938,15 @@ def live_dashboard():
     with prediction_col2:
 
         if critical_count >= 5:
+
             prediction = "HIGH"
 
         elif warning_count >= 5:
+
             prediction = "MEDIUM"
 
         else:
+
             prediction = "LOW"
 
         st.metric(
