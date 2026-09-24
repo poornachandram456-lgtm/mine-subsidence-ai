@@ -1,9 +1,8 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-import os
+import random
 from datetime import datetime
-
 
 # =========================================================
 # PAGE CONFIGURATION
@@ -15,7 +14,6 @@ st.set_page_config(
     layout="wide"
 )
 
-
 # =========================================================
 # LIVE DASHBOARD
 # =========================================================
@@ -23,29 +21,52 @@ st.set_page_config(
 @st.fragment(run_every="2s")
 def live_dashboard():
 
-    # -----------------------------------------------------
-    # LOAD LIVE SENSOR DATA
-    # -----------------------------------------------------
+    # =====================================================
+    # GENERATE LIVE SIMULATED SENSOR DATA
+    # =====================================================
 
-    if not os.path.exists("sensor_data.csv"):
+    sensors = []
 
-        st.warning(
-            "Waiting for sensor data... "
-            "Make sure simulator.py is running."
-        )
+    for i in range(1, 101):
 
-        return
+        # Normal operating values
+        tilt = random.uniform(0.10, 0.70)
+        displacement = random.uniform(1.0, 6.0)
+        vibration = random.uniform(0.01, 0.08)
 
-    try:
-        df = pd.read_csv("sensor_data.csv")
+        # Random abnormal conditions
+        chance = random.random()
 
-    except Exception:
-        st.warning("Reading sensor data...")
-        return
+        if chance < 0.05:
+            # Critical
+            tilt = random.uniform(1.5, 3.0)
+            displacement = random.uniform(12.0, 20.0)
+            vibration = random.uniform(0.20, 0.40)
+            status = "Critical"
 
-    # -----------------------------------------------------
+        elif chance < 0.15:
+            # Warning
+            tilt = random.uniform(0.8, 1.5)
+            displacement = random.uniform(7.0, 12.0)
+            vibration = random.uniform(0.08, 0.20)
+            status = "Warning"
+
+        else:
+            status = "Normal"
+
+        sensors.append({
+            "Sensor": f"S{i}",
+            "Tilt": round(tilt, 2),
+            "Displacement": round(displacement, 2),
+            "Vibration": round(vibration, 2),
+            "Status": status
+        })
+
+    df = pd.DataFrame(sensors)
+
+    # =====================================================
     # SENSOR STATUS COUNTS
-    # -----------------------------------------------------
+    # =====================================================
 
     total_sensors = len(df)
 
@@ -61,9 +82,9 @@ def live_dashboard():
         df["Status"] == "Critical"
     ).sum()
 
-    # -----------------------------------------------------
+    # =====================================================
     # HEADER
-    # -----------------------------------------------------
+    # =====================================================
 
     st.title(
         "⛏️ AI-Enabled Mine Subsidence Monitoring System"
@@ -76,9 +97,9 @@ def live_dashboard():
 
     st.divider()
 
-    # -----------------------------------------------------
+    # =====================================================
     # TOP STATUS CARDS
-    # -----------------------------------------------------
+    # =====================================================
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -108,9 +129,9 @@ def live_dashboard():
 
     st.divider()
 
-    # -----------------------------------------------------
+    # =====================================================
     # MAIN DASHBOARD
-    # -----------------------------------------------------
+    # =====================================================
 
     left, right = st.columns([2.2, 1])
 
@@ -197,7 +218,6 @@ def live_dashboard():
                 go.Scatter(
                     x=selected["x"],
                     y=selected["y"],
-
                     mode="markers+text",
 
                     marker=dict(
@@ -206,7 +226,6 @@ def live_dashboard():
                     ),
 
                     text=selected["Sensor"],
-
                     textposition="top center",
 
                     customdata=selected[
@@ -220,12 +239,9 @@ def live_dashboard():
                     hovertemplate=(
                         "<b>%{text}</b><br>"
                         "Tilt: %{customdata[0]}°<br>"
-                        "Displacement: "
-                        "%{customdata[1]} mm<br>"
-                        "Vibration: "
-                        "%{customdata[2]} g<br>"
-                        "Status: "
-                        + status +
+                        "Displacement: %{customdata[1]} mm<br>"
+                        "Vibration: %{customdata[2]} g<br>"
+                        "Status: " + status +
                         "<extra></extra>"
                     ),
 
@@ -238,7 +254,6 @@ def live_dashboard():
         # -------------------------------------------------
 
         fig.update_layout(
-
             height=570,
 
             xaxis=dict(
@@ -278,56 +293,67 @@ def live_dashboard():
             "engine and updated continuously."
         )
 
-
-        # =====================================================
+        # =================================================
         # 3D UNDERGROUND MINE DIGITAL MODEL
-        # =====================================================
+        # =================================================
 
-        st.subheader("⛏️ 3D Underground Mine Digital Model")
+        st.subheader(
+            "⛏️ 3D Underground Mine Digital Model"
+        )
 
         fig3d = go.Figure()
 
-        # -----------------------------------------------------
-        # 3D MINE FLOOR / CAVE LAYOUT
-        # -----------------------------------------------------
+        # -------------------------------------------------
+        # MAIN TUNNEL CORRIDORS
+        # -------------------------------------------------
 
-        # Main tunnel corridors
         tunnel_y_positions = [1, 3, 5, 7, 9]
         tunnel_x_positions = [1, 3, 5, 7, 9]
 
         for y in tunnel_y_positions:
+
             fig3d.add_trace(
                 go.Scatter3d(
                     x=list(range(10)),
                     y=[y] * 10,
                     z=[-2] * 10,
                     mode="lines",
-                    line=dict(color="#777777", width=12),
+                    line=dict(
+                        color="#777777",
+                        width=12
+                    ),
                     hoverinfo="skip",
                     showlegend=False
                 )
             )
 
         for x in tunnel_x_positions:
+
             fig3d.add_trace(
                 go.Scatter3d(
                     x=[x] * 10,
                     y=list(range(10)),
                     z=[-2] * 10,
                     mode="lines",
-                    line=dict(color="#777777", width=12),
+                    line=dict(
+                        color="#777777",
+                        width=12
+                    ),
                     hoverinfo="skip",
                     showlegend=False
                 )
             )
 
-        # -----------------------------------------------------
-        # CAVE WALL / ROOF EFFECT
-        # -----------------------------------------------------
+        # -------------------------------------------------
+        # OUTER BOUNDARY
+        # -------------------------------------------------
 
-        # Outer boundary lines
         boundary_points = [
-            (0, 0), (9, 0), (9, 9), (0, 9), (0, 0)
+            (0, 0),
+            (9, 0),
+            (9, 9),
+            (0, 9),
+            (0, 0)
         ]
 
         fig3d.add_trace(
@@ -336,13 +362,19 @@ def live_dashboard():
                 y=[p[1] for p in boundary_points],
                 z=[-0.8] * len(boundary_points),
                 mode="lines",
-                line=dict(color="#555555", width=10),
+                line=dict(
+                    color="#555555",
+                    width=10
+                ),
                 hoverinfo="skip",
                 showlegend=False
             )
         )
 
-        # Underground roof plane
+        # -------------------------------------------------
+        # UNDERGROUND ROOF
+        # -------------------------------------------------
+
         fig3d.add_trace(
             go.Mesh3d(
                 x=[0, 9, 9, 0],
@@ -358,7 +390,10 @@ def live_dashboard():
             )
         )
 
-        # Underground floor plane
+        # -------------------------------------------------
+        # UNDERGROUND FLOOR
+        # -------------------------------------------------
+
         fig3d.add_trace(
             go.Mesh3d(
                 x=[0, 9, 9, 0],
@@ -374,9 +409,9 @@ def live_dashboard():
             )
         )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # SUPPORT PILLARS
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         pillar_positions = [
             (1, 1), (3, 1), (5, 1), (7, 1),
@@ -385,25 +420,30 @@ def live_dashboard():
         ]
 
         for px, py in pillar_positions:
+
             fig3d.add_trace(
                 go.Scatter3d(
                     x=[px, px],
                     y=[py, py],
                     z=[-2.45, -0.55],
                     mode="lines",
-                    line=dict(color="#888888", width=8),
+                    line=dict(
+                        color="#888888",
+                        width=8
+                    ),
                     hoverinfo="skip",
                     showlegend=False
                 )
             )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # SENSOR NODE POSITIONS
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         x_3d = []
         y_3d = []
         z_3d = []
+
         sensor_names = []
         tilt_values = []
         displacement_values = []
@@ -419,7 +459,6 @@ def live_dashboard():
             x = (sensor_number - 1) % 10
             y = (sensor_number - 1) // 10
 
-            # Sensor layer inside underground mine
             z = -1.65
 
             x_3d.append(x)
@@ -432,9 +471,9 @@ def live_dashboard():
             vibration_values.append(row["Vibration"])
             status_values.append(row["Status"])
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # RISK-BASED SENSOR COLOURS
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         marker_colors = []
 
@@ -449,9 +488,9 @@ def live_dashboard():
             else:
                 marker_colors.append("#00c853")
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # SENSOR NODES
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         fig3d.add_trace(
             go.Scatter3d(
@@ -496,30 +535,34 @@ def live_dashboard():
             )
         )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # RISK LEGEND
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         for label, colour in [
             ("Normal", "#00c853"),
             ("Warning", "#ffb000"),
             ("Critical", "#ff2b2b")
         ]:
+
             fig3d.add_trace(
                 go.Scatter3d(
                     x=[None],
                     y=[None],
                     z=[None],
                     mode="markers",
-                    marker=dict(size=8, color=colour),
+                    marker=dict(
+                        size=8,
+                        color=colour
+                    ),
                     name=label,
                     hoverinfo="skip"
                 )
             )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # 3D CAMERA / AXES
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         fig3d.update_layout(
             height=700,
@@ -567,6 +610,7 @@ def live_dashboard():
                 ),
 
                 aspectmode="manual",
+
                 aspectratio=dict(
                     x=1.3,
                     y=1.3,
@@ -609,9 +653,7 @@ def live_dashboard():
                 "HIGH"
             )
 
-            st.write(
-                "### Detected Changes"
-            )
+            st.write("### Detected Changes")
 
             st.write(
                 "📐 Abnormal tilt detected"
@@ -629,9 +671,7 @@ def live_dashboard():
                 "⚠️ Multiple nearby sensors affected"
             )
 
-            st.write(
-                "### Recommended Action"
-            )
+            st.write("### Recommended Action")
 
             st.warning(
                 "Inspect the affected mine zone "
@@ -785,15 +825,12 @@ def live_dashboard():
     with prediction_col2:
 
         if critical_count >= 5:
-
             prediction = "HIGH"
 
         elif warning_count >= 5:
-
             prediction = "MEDIUM"
 
         else:
-
             prediction = "LOW"
 
         st.metric(
@@ -837,9 +874,9 @@ def live_dashboard():
             "Early Warning: ACTIVE"
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # LAST UPDATE
-    # -----------------------------------------------------
+    # =====================================================
 
     st.divider()
 
